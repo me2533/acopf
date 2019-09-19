@@ -71,6 +71,14 @@ function mpc = preprocess (filename)
   end
   mpc = feval(name);
   cd(currFld);
+  
+  if max(mpc.gencost(:,1))>2 || min(mpc.gencost(:,1))<2
+    error('Only generation cost functions of type 2 are supported')
+  end
+
+  if max(mpc.gencost(:,4))>min(mpc.gencost(:,4))
+    error('Generation cost functions of type 2 are supportedmust be of the same degree (2 or 3) for all generators')
+  end
 
   mpc.casename = name;
   mpc.bus = mpc.bus(mpc.bus(:,2)<4,:);
@@ -202,9 +210,13 @@ function f = objective (x, auxdata)
   baseMVA = mpc.baseMVA;
 
   Pg = 2*nbuses + (1:ngens);
-  actgen = mpc.gen(:,8);
-  f = sum(actgen.*( baseMVA^2*mpc.gencost(:,5).*x(Pg).^2 + baseMVA*mpc.gencost(:,6).*x(Pg) + mpc.gencost(:,7) ));
-
+  actgen = mpc.gen(:,8);  
+  if mpc.gencost(1,4)==3
+    f = sum(actgen.*( baseMVA^2*mpc.gencost(:,5).*x(Pg).^2 + baseMVA*mpc.gencost(:,6).*x(Pg) + mpc.gencost(:,7) ));
+  elseif mpc.gencost(1,4)==2
+    f = sum(actgen.*( baseMVA*mpc.gencost(:,5).*x(Pg) + mpc.gencost(:,6) ));
+  end
+  
 % ----------------------------------------------------------------------
 function g = gradient (x, auxdata)
   mpc = auxdata{1};
@@ -215,7 +227,11 @@ function g = gradient (x, auxdata)
   Pg = 2*nbuses + (1:ngens);
   actgen = mpc.gen(:,8);
   g = zeros(2*nbuses+2*ngens,1);
-  g(Pg) = actgen.*( 2*baseMVA^2*mpc.gencost(:,5).*x(Pg) + baseMVA*mpc.gencost(:,6) );
+  if mpc.gencost(1,4)==3
+    g(Pg) = actgen.*( 2*baseMVA^2*mpc.gencost(:,5).*x(Pg) + baseMVA*mpc.gencost(:,6) );
+  elseif mpc.gencost(1,4)==2
+    g(Pg) = actgen.*( baseMVA*mpc.gencost(:,5) );
+  end
 
 % ----------------------------------------------------------------------
 function c = constraints (x, auxdata)
@@ -544,8 +560,10 @@ function H = hessian (x, sigma, lambda, auxdata)
   for i=1:ngens
     if mpc.gen(i,8)==0; continue; end
 
-    Pg_count = 2*nbuses + i;
-    H(Pg_count,Pg_count) = H(Pg_count,Pg_count) + sigma*2*mpc.gencost(i,5)*baseMVA^2;
+    Pg_count = 2*nbuses + i;    
+    if mpc.gencost(1,4)==3
+      H(Pg_count,Pg_count) = H(Pg_count,Pg_count) + sigma*2*mpc.gencost(i,5)*baseMVA^2;
+    end
   end
 
   k = 0;
@@ -725,7 +743,9 @@ function H = hessianstructure (auxdata)
     if mpc.gen(i,8)==0; continue; end
 
     Pg_count = 2*nbuses + i;
-    H(Pg_count,Pg_count) = (mpc.gencost(i,5)~=0);
+    if mpc.gencost(1,4)==3
+      H(Pg_count,Pg_count) = (mpc.gencost(i,5)~=0);
+    end
   end
 
   for i=1:nbuses
