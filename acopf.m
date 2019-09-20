@@ -876,17 +876,19 @@ function doanalysis (x, options, info, auxdata, x0_info, t0)
   fprintf(fid,'Lambda Q         %7.2f $/MWh @ bus %-5d',min(-info.lambda(2:2:2*nbuses)/baseMVA),mpc.bus(find(info.lambda(2:2:2*nbuses)==max(info.lambda(2:2:2*nbuses)),1),1));
   fprintf(fid,'   %7.2f $/MWh @ bus %-5d\n',max(-info.lambda(2:2:2*nbuses)/baseMVA),mpc.bus(find(info.lambda(2:2:2*nbuses)==min(info.lambda(2:2:2*nbuses)),1),1));
   fprintf(fid,'\n');
-  fprintf(fid,'=========================================================================================\n');
-  fprintf(fid,'|     Bus Data                                                                          |\n');
-  fprintf(fid,'=========================================================================================\n');
-  fprintf(fid,' Bus  ------- Voltage ---------      Generation             Load         Lambda($/MVA-hr)\n');
-  fprintf(fid,'  #   Mag(pu) Ang(deg) Ang(rad)   P (MW)   Q (MVAr)   P (MW)   Q (MVAr)     P        Q   \n');
-  fprintf(fid,'----- ------- -------- --------  --------  --------  --------  --------  -------  -------\n');
+  fprintf(fid,'==========================================================================================================\n');
+  fprintf(fid,'|     Bus Data    (*: reference bus, fixed voltage phase angle)                                          |\n');
+  fprintf(fid,'==========================================================================================================\n');
+  fprintf(fid,' Bus  ------- Voltage --------------------------      Generation             Load         Lambda($/MVA-hr)\n');
+  fprintf(fid,'  #   Mag(pu) Ang(deg) Ang(rad)   Real    Imag     P (MW)   Q (MVAr)   P (MW)   Q (MVAr)     P        Q   \n');
+  fprintf(fid,'----- ------- -------- --------  ------  -------  --------  --------  --------  --------  -------  -------\n');
   for i=1:nbuses
-    fprintf(fid,'%4d   %5.3f  %7.3f  %7.4f',mpc.bus(i,1),x(i),x(nbuses+i)*180/pi,x(nbuses+i));
     if mpc.bus(i,2)==3
-      fprintf(fid,'* %8.2f  %8.2f',PG(i),QG(i));
-    elseif length(mpc.genids{i})>0
+      fprintf(fid,'%4d*  %5.3f  %7.3f  %7.4f  %7.4f  %7.4f',mpc.bus(i,1),x(i),x(nbuses+i)*180/pi,x(nbuses+i),real(x(i)*exp(1j*x(nbuses+i))),imag(x(i)*exp(1j*x(nbuses+i))));
+    else
+      fprintf(fid,'%4d   %5.3f  %7.3f  %7.4f  %7.4f  %7.4f',mpc.bus(i,1),x(i),x(nbuses+i)*180/pi,x(nbuses+i),real(x(i)*exp(1j*x(nbuses+i))),imag(x(i)*exp(1j*x(nbuses+i))));
+    end
+    if length(mpc.genids{i})>0
       fprintf(fid,'  %8.2f  %8.2f',PG(i),QG(i));
     else
       fprintf(fid,'       -         -  ');
@@ -908,8 +910,8 @@ function doanalysis (x, options, info, auxdata, x0_info, t0)
     end
     fprintf(fid,'\n');
   end
-  fprintf(fid,'                                 --------  --------  --------  --------\n');
-  fprintf(fid,'                        Total:  %8.2f  %8.2f',sum(PG),sum(QG));
+  fprintf(fid,'                                                  --------  --------  --------  --------\n');
+  fprintf(fid,'                                          Total:  %8.2f  %8.2f',sum(PG),sum(QG));
   fprintf(fid,'  %8.2f  %8.2f\n',sumPd,sumQd);
   fprintf(fid,'\n');
   fprintf(fid,'\n');
